@@ -1,11 +1,11 @@
 /**
  * ESP32 Smart Lighting + Air Quality System
  * -----------------------------------------
- * Σύνδεση: WiFi/LoRa — Υποστήριξη εναλλαγής mode μέσω ThingSpeak.
- * Διαχειρίζεται αισθητήρες LDR (φως), PIR (κίνηση), MQ135 (αέρας).
- * Επικοινωνεί με ThingSpeak, Sonoff και LoRa TTN.
- * Author: [Το Όνομά σου ή Project name]
- * License: MIT (ή ό,τι θέλεις)
+ * Connectivity: WiFi/LoRa — Supports mode switching via ThingSpeak.
+ * Manages sensors: LDR (light), PIR (motion), MQ135 (air quality).
+ * Communicates with ThingSpeak, Sonoff, and LoRa TTN.
+ * Author: [Your Name or Project name]
+ * License: MIT (or any you prefer)
  */
 
 #include "config.h"
@@ -16,7 +16,7 @@
 // --- PIN definitions ---
 #define PIR_PIN    13
 #define LDR_PIN    35
-#define MQ135_PIN  34   // GPIO 34 για analog in
+#define MQ135_PIN  34   // GPIO 34 for analog input
 
 // --- WiFi Credentials ---
 // TODO: Enter your own WiFi credentials below:
@@ -31,7 +31,7 @@ const char* channelA_Url    = "http://api.thingspeak.com/update?api_key=";
 const char* channelB_ApiKey = "YOUR_CHANNEL_B_API_KEY"; // <-- Replace with your Channel B API Key
 const char* channelB_Url    = "http://api.thingspeak.com/update?api_key=";
 
-// --- Poll για mode switch ---
+// --- Poll for mode switch ---
 const char* thingspeakReadAPIKey = "YOUR_THINGSPEAK_READ_API_KEY"; // <-- Replace with your Read API Key
 const char* thingspeakPollUrl = "http://api.thingspeak.com/channels/YOUR_CHANNEL_ID/fields/1/last.json?api_key=YOUR_THINGSPEAK_READ_API_KEY"; // <-- Replace with your channel ID and Read API Key
 
@@ -51,7 +51,7 @@ const unsigned long field4Interval = 120000UL;
 // =============== Helper Functions ===============
 
 /**
- * Στέλνει εντολή OFF στο Sonoff (μέσω cloud)
+ * Sends OFF command to Sonoff (via cloud)
  */
 void sendOffToSonoff() {
   if (WiFi.status() == WL_CONNECTED) {
@@ -70,7 +70,7 @@ void sendOffToSonoff() {
 }
 
 /**
- * Στέλνει PIR event στο ThingSpeak (Channel A)
+ * Sends PIR event to ThingSpeak (Channel A)
  */
 void sendPirEventToThingSpeak(int pirVal) {
   if (WiFi.status() == WL_CONNECTED) {
@@ -88,8 +88,8 @@ void sendPirEventToThingSpeak(int pirVal) {
 }
 
 /**
- * Διαβάζει mode από το ThingSpeak (field1)
- * Επιστρέφει 1 ή 2 (WiFi/LoRa)
+ * Reads mode from ThingSpeak (field1)
+ * Returns 1 or 2 (WiFi/LoRa)
  */
 int pollSensorModeFromThingSpeak() {
   if (WiFi.status() == WL_CONNECTED) {
@@ -117,7 +117,7 @@ int pollSensorModeFromThingSpeak() {
 }
 
 /**
- * Στέλνει το mode (1/2) στο ThingSpeak (Channel B)
+ * Sends the mode (1/2) to ThingSpeak (Channel B)
  */
 void sendMessageToThingspeak(int value) {
   if (WiFi.status() == WL_CONNECTED) {
@@ -135,7 +135,7 @@ void sendMessageToThingspeak(int value) {
 }
 
 /**
- * Στέλνει τιμή MQ135 στο ThingSpeak (Channel B)
+ * Sends MQ135 value to ThingSpeak (Channel B)
  */
 void sendMq135ThingSpeak(int value) {
   if (WiFi.status() == WL_CONNECTED) {
@@ -151,7 +151,7 @@ void sendMq135ThingSpeak(int value) {
 }
 
 /**
- * Στέλνει τιμή MQ135 μέσω LoRa (TTN)
+ * Sends MQ135 value via LoRa (TTN)
  */
 void sendMq135LoRa(int value) {
   time_t timestamp = time(nullptr);  
@@ -185,7 +185,7 @@ void setup() {
   pinMode(LDR_PIN, INPUT);
   pinMode(MQ135_PIN, INPUT);
 
-  // Connect WiFi
+  // Connect to WiFi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -206,7 +206,7 @@ void setup() {
   }
   Serial.println("\nNTP time set.");
 
-  // Init LoRa
+  // Initialize LoRa
   mySPI.begin(5, 19, 27, 18);
   int16_t state = radio.begin();
   if (state != RADIOLIB_ERR_NONE) {
@@ -265,22 +265,23 @@ void loop() {
   static bool ledIsOn = false;
   static unsigned int motionCounter = 0;
 
+
   int ldrValue = digitalRead(LDR_PIN);
   bool isNight = (ldrValue == HIGH);
 
   if (ldrValue != lastLdrValue) {
     lastLdrValue = ldrValue;
-    Serial.print("LDR CHANGED! Νέα τιμή: ");
+    Serial.print("LDR CHANGED! New value: ");
     Serial.print(ldrValue);
     Serial.print(" | isNight: ");
     Serial.println(isNight ? "YES" : "NO");
     if (!isNight) {
-      sendOffToSonoff();  // Πρωί = σβήσε LED/actuator
-      Serial.println("Ξημέρωσε — LED OFF!");
+      sendOffToSonoff();  // Morning = turn off LED/actuator
+      Serial.println("Daytime — LED OFF!");
     }
   }
 
-  // PIR trigger μόνο τη νύχτα (και αν δεν είναι ήδη ON)
+  // PIR triggers only at night (and if not already ON)
   bool pirValue = digitalRead(PIR_PIN);
   if (isNight && pirValue != lastPirState) {
     lastPirState = pirValue;
@@ -293,7 +294,7 @@ void loop() {
     }
   }
 
-  // === Περιοδικό update mode (field4) στο ThingSpeak ===
+  // === Periodic update of mode (field4) to ThingSpeak ===
   if (now - lastField4Update >= field4Interval) {
     lastField4Update = now;
     sendMessageToThingspeak(field4Value);

@@ -2,8 +2,8 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 
-#define HTTP_LED_PIN 14      // Πρώτο LED: HTTP
-#define WEBHOOK_LED_PIN 13   // Δεύτερο LED: TTN webhook
+#define HTTP_LED_PIN 14      // First LED: HTTP
+#define WEBHOOK_LED_PIN 13   // Second LED: TTN webhook
 
 // TODO: Enter your own WiFi credentials below:
 const char* ssid = "YOUR_WIFI_SSID";      // <-- Replace with your WiFi SSID
