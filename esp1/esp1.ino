@@ -1,44 +1,65 @@
-#include "config.h"  
+/**
+ * ESP32 Smart Lighting + Air Quality System
+ * -----------------------------------------
+ * Σύνδεση: WiFi/LoRa — Υποστήριξη εναλλαγής mode μέσω ThingSpeak.
+ * Διαχειρίζεται αισθητήρες LDR (φως), PIR (κίνηση), MQ135 (αέρας).
+ * Επικοινωνεί με ThingSpeak, Sonoff και LoRa TTN.
+ * Author: [Το Όνομά σου ή Project name]
+ * License: MIT (ή ό,τι θέλεις)
+ */
+
+#include "config.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <time.h>
 
-#define PIR_PIN 13
-#define LDR_PIN 35
-#define MQ135_PIN 34  // Π.χ. GPIO 34 για analog in
+// --- PIN definitions ---
+#define PIR_PIN    13
+#define LDR_PIN    35
+#define MQ135_PIN  34   // GPIO 34 για analog in
 
-const char* ssid = "COSMOTE-955376";
-const char* password = "123456789";
+// --- WiFi Credentials ---
+// TODO: Enter your own WiFi credentials below:
+const char* ssid     = "YOUR_WIFI_SSID";      // <-- Replace with your WiFi SSID
+const char* password = "YOUR_WIFI_PASSWORD";  // <-- Replace with your WiFi password
 
-// --- Channel A: PIR, Φως (PIR/LED events) ---
-const char* channelA_ApiKey = "RX97HML2AG46RLYM";
-const char* channelA_Url = "http://api.thingspeak.com/update?api_key=";
+// --- ThingSpeak: Channel Keys & URLs ---
+// TODO: Enter your own ThingSpeak API keys and URLs below:
+const char* channelA_ApiKey = "YOUR_CHANNEL_A_API_KEY"; // <-- Replace with your Channel A API Key
+const char* channelA_Url    = "http://api.thingspeak.com/update?api_key=";
 
-// --- Channel B: MQ135, Mode ---
-const char* channelB_ApiKey = "A7W8HEL5G4B3FTFY";
-const char* channelB_Url = "http://api.thingspeak.com/update?api_key=";
+const char* channelB_ApiKey = "YOUR_CHANNEL_B_API_KEY"; // <-- Replace with your Channel B API Key
+const char* channelB_Url    = "http://api.thingspeak.com/update?api_key=";
 
-// Poll για mode switch 
-const char* thingspeakReadAPIKey = "BP3A832DD4TIAIXR";
-const char* thingspeakPollUrl = "http://api.thingspeak.com/channels/3004952/fields/1/last.json?api_key=BP3A832DD4TIAIXR";
+// --- Poll για mode switch ---
+const char* thingspeakReadAPIKey = "YOUR_THINGSPEAK_READ_API_KEY"; // <-- Replace with your Read API Key
+const char* thingspeakPollUrl = "http://api.thingspeak.com/channels/YOUR_CHANNEL_ID/fields/1/last.json?api_key=YOUR_THINGSPEAK_READ_API_KEY"; // <-- Replace with your channel ID and Read API Key
 
-// Timing
-unsigned long lastModeCheck = 0;
+// --- Timing constants ---
+unsigned long lastModeCheck      = 0;
 const unsigned long modeCheckInterval = 10000UL;
-int currentSensorMode = 1;  // 1=WiFi, 2=LoRa
-unsigned long lastDataSend = 0;
+int currentSensorMode = 1; // 1=WiFi, 2=LoRa
+
+unsigned long lastDataSend       = 0;
 const unsigned long dataSendInterval = 30000UL;
-unsigned long lastField4Update = 0;
-int field4Value = 1;
+
+unsigned long lastField4Update   = 0;
+int field4Value                  = 1;
 const unsigned long field4Interval = 120000UL;
 
 
+// =============== Helper Functions ===============
+
+/**
+ * Στέλνει εντολή OFF στο Sonoff (μέσω cloud)
+ */
 void sendOffToSonoff() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     http.setTimeout(4000);
-    String url = "https://c764aa149782.ngrok-free.app/zeroconf/switch";
-    String payload = "{\"deviceid\":\"1000b913b0\",\"data\":{\"switch\":\"off\"}}";
+    // TODO: Enter your own Sonoff device URL and device ID below:
+    String url = "https://YOUR_NGROK_OR_SONOFF_URL/zeroconf/switch"; // <-- Replace with your Sonoff/Ngrok URL
+    String payload = "{\"deviceid\":\"YOUR_DEVICE_ID\",\"data\":{\"switch\":\"off\"}}"; // <-- Replace with your Sonoff device ID
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
     int code = http.POST(payload);
@@ -48,7 +69,9 @@ void sendOffToSonoff() {
   }
 }
 
-
+/**
+ * Στέλνει PIR event στο ThingSpeak (Channel A)
+ */
 void sendPirEventToThingSpeak(int pirVal) {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
@@ -64,6 +87,10 @@ void sendPirEventToThingSpeak(int pirVal) {
   }
 }
 
+/**
+ * Διαβάζει mode από το ThingSpeak (field1)
+ * Επιστρέφει 1 ή 2 (WiFi/LoRa)
+ */
 int pollSensorModeFromThingSpeak() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
@@ -89,6 +116,9 @@ int pollSensorModeFromThingSpeak() {
   return currentSensorMode;
 }
 
+/**
+ * Στέλνει το mode (1/2) στο ThingSpeak (Channel B)
+ */
 void sendMessageToThingspeak(int value) {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
@@ -104,7 +134,9 @@ void sendMessageToThingspeak(int value) {
   }
 }
 
-
+/**
+ * Στέλνει τιμή MQ135 στο ThingSpeak (Channel B)
+ */
 void sendMq135ThingSpeak(int value) {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
@@ -118,6 +150,9 @@ void sendMq135ThingSpeak(int value) {
   }
 }
 
+/**
+ * Στέλνει τιμή MQ135 μέσω LoRa (TTN)
+ */
 void sendMq135LoRa(int value) {
   time_t timestamp = time(nullptr);  
   uint8_t uplinkPayload[6];
@@ -142,6 +177,7 @@ void sendMq135LoRa(int value) {
 }
 
 
+// =============== Main Program ===============
 
 void setup() {
   Serial.begin(115200);
@@ -149,6 +185,7 @@ void setup() {
   pinMode(LDR_PIN, INPUT);
   pinMode(MQ135_PIN, INPUT);
 
+  // Connect WiFi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -158,8 +195,8 @@ void setup() {
   Serial.print("ESP IP: ");
   Serial.println(WiFi.localIP());
 
-  // NTP time sync για σωστό epoch
-  configTime(2 * 3600, 0, "pool.ntp.org");  // Greece: GMT+2
+  // NTP time sync
+  configTime(2 * 3600, 0, "pool.ntp.org"); // GMT+2
   Serial.println("Waiting for NTP time...");
   time_t now = time(nullptr);
   while (now < 1700000000) {  
@@ -169,6 +206,7 @@ void setup() {
   }
   Serial.println("\nNTP time set.");
 
+  // Init LoRa
   mySPI.begin(5, 19, 27, 18);
   int16_t state = radio.begin();
   if (state != RADIOLIB_ERR_NONE) {
@@ -194,6 +232,7 @@ void setup() {
 void loop() {
   unsigned long now = millis();
 
+  // === Mode polling ===
   if (now - lastModeCheck >= modeCheckInterval) {
     lastModeCheck = now;
     int polledMode = pollSensorModeFromThingSpeak();
@@ -204,6 +243,7 @@ void loop() {
     }
   }
 
+  // === Data send ===
   if (now - lastDataSend >= dataSendInterval) {
     lastDataSend = now;
     int mq135Value = analogRead(MQ135_PIN);
@@ -235,7 +275,7 @@ void loop() {
     Serial.print(" | isNight: ");
     Serial.println(isNight ? "YES" : "NO");
     if (!isNight) {
-      sendOffToSonoff();  // νέο!
+      sendOffToSonoff();  // Πρωί = σβήσε LED/actuator
       Serial.println("Ξημέρωσε — LED OFF!");
     }
   }
@@ -253,6 +293,7 @@ void loop() {
     }
   }
 
+  // === Περιοδικό update mode (field4) στο ThingSpeak ===
   if (now - lastField4Update >= field4Interval) {
     lastField4Update = now;
     sendMessageToThingspeak(field4Value);

@@ -5,8 +5,9 @@
 #define HTTP_LED_PIN 14      // Πρώτο LED: HTTP
 #define WEBHOOK_LED_PIN 13   // Δεύτερο LED: TTN webhook
 
-const char* ssid = "COSMOTE-955376";
-const char* password = "123456789";
+// TODO: Enter your own WiFi credentials below:
+const char* ssid = "YOUR_WIFI_SSID";      // <-- Replace with your WiFi SSID
+const char* password = "YOUR_WIFI_PASSWORD";  // <-- Replace with your WiFi password
 
 WebServer server(80);
 
