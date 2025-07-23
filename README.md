@@ -8,8 +8,13 @@ The device communicates with ThingSpeak as the cloud service and also sends data
 If you are interested in using this project locally—without the official Sonoff app—feel free to open an issue or comment. I’ll be happy to help you adapt it and provide the necessary presets and code changes.
 
 (Compatible with SONOFF DIY and TTGO LoRa32)
+
 -HTTP-based ESP32 code
+
 -Supports PIR, LDR, MQ135 (air quality), and Sonoff smart switch
+
 -Cloud integration via ThingSpeak
+
 -LoRa/TTN uplink for remote data transmission
+
 -Easily modifiable for other sensors/devices
