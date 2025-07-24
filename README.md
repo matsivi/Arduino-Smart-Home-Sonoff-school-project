@@ -6,7 +6,7 @@ The system is based on the HTTP protocol, using a **PIR sensor** for motion dete
 
 The device communicates with **ThingSpeak** as the cloud service and also sends data over **LoRa**.
 
-If you are interested in using this project locally—without the official Sonoff app—feel free to open an issue or comment. I’ll be happy to help you adapt it and provide the necessary presets and code changes.
+If you are interested in using this project locally, without the official Sonoff app, feel free to open an issue or comment. I’ll be happy to help you adapt it and provide the necessary presets and code changes.
 
 **(Compatible with SONOFF DIY and TTGO LoRa32)**
 
