@@ -4,8 +4,6 @@
  * Connectivity: WiFi/LoRa — Supports mode switching via ThingSpeak.
  * Manages sensors: LDR (light), PIR (motion), MQ135 (air quality).
  * Communicates with ThingSpeak, Sonoff, and LoRa TTN.
- * Author: [Your Name or Project name]
- * License: MIT (or any you prefer)
  */
 
 #include "config.h"
